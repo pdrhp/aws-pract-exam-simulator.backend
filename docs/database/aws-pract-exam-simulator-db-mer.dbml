@@ -1,0 +1,72 @@
+﻿Table users {
+  user_id serial [pk, note: "Identificador único do usuário no sistema"]
+  keycloak_id varchar(255) [unique, not null, note: "ID do usuário no sistema Keycloak para autenticação"]
+  username varchar(100) [not null, note: "Nome de usuário"]
+  email varchar(255) [not null, note: "Email do usuário"]
+  weight_profiles jsonb [note: "Array de perfis de peso salvos pelo usuário (opcional)"]
+  metadata jsonb [note: "Informações adicionais sobre o usuário"]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: "Data de criação do registro"]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`, note: "Data da última atualização"]
+}
+
+Table domains {
+  domain_id serial [pk, note: "Identificador único do domínio"]
+  names jsonb [not null, note: "Nome do domínio em diferentes idiomas"]
+  code varchar(10) [not null, note: "Código identificador do domínio"]
+  weight_percentage integer [note: "Peso do domínio na prova original em porcentagem"]
+  description jsonb [note: "Descrição do domínio em diferentes idiomas"]
+}
+
+Table questions {
+  question_id serial [pk, note: "Identificador único da questão"]
+  domain_id integer [ref: > domains.domain_id, note: "Domínio ao qual a questão pertence"]
+  question_text jsonb [not null, note: "Texto da questão em diferentes idiomas"]
+  options jsonb [not null, note: "Opções de resposta da questão"]
+  correct_answers jsonb [not null, note: "Identificadores das respostas corretas"]
+  question_type varchar(20) [not null, note: "Tipo de questão: múltipla escolha, única escolha, etc."]
+  explanation jsonb [note: "Explicação da resposta correta em diferentes idiomas"]
+  metadata jsonb [note: "Metadados adicionais da questão: dificuldade, tags, etc."]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: "Data de criação do registro"]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`, note: "Data da última atualização"]
+}
+
+Table simulation_runs {
+  run_id serial [pk, note: "Identificador único do simulado"]
+  user_id integer [ref: > users.user_id, note: "Usuário que realizou o simulado"]
+  run_type varchar(50) [not null, note: "Tipo de simulado: PADRÃO, PERSONALIZADO, QUESTÕES_ERRADAS, etc."]
+  total_questions integer [not null, note: "Número total de questões no simulado"]
+  correct_answers integer [not null, note: "Número de respostas corretas"]
+  score decimal(5,2) [not null, note: "Porcentagem de acertos no simulado"]
+  custom_weights jsonb [note: "Pesos personalizados usados nesta execução {domain_id: weight, ...}"]
+  settings jsonb [note: "Configurações adicionais: apenas questões novas, tempo limite, etc."]
+  started_at timestamp [not null, note: "Data/hora de início do simulado"]
+  completed_at timestamp [note: "Data/hora de finalização do simulado"]
+  status varchar(20) [not null, note: "Status atual: EM_ANDAMENTO, COMPLETO, ABANDONADO"]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: "Data de criação do registro"]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`, note: "Data da última atualização"]
+}
+
+Table run_questions {
+  run_question_id serial [pk, note: "Identificador único da questão no simulado"]
+  run_id integer [ref: > simulation_runs.run_id, note: "Simulado ao qual a questão pertence"]
+  question_id integer [ref: > questions.question_id, note: "Referência à questão original"]
+  user_answers jsonb [note: "Respostas fornecidas pelo usuário"]
+  is_correct boolean [note: "Indica se o usuário acertou a questão"]
+  time_spent_seconds integer [note: "Tempo gasto nesta questão em segundos"]
+  question_order integer [not null, note: "Ordem da questão no simulado"]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: "Data de criação do registro"]
+}
+
+Table user_domain_performance {
+  performance_id serial [pk, note: "Identificador único do registro de desempenho"]
+  user_id integer [ref: > users.user_id, note: "Usuário ao qual o desempenho se refere"]
+  domain_id integer [ref: > domains.domain_id, note: "Domínio específico de conhecimento"]
+  total_questions integer [not null, default: 0, note: "Total de questões respondidas neste domínio"]
+  correct_answers integer [not null, default: 0, note: "Total de respostas corretas neste domínio"]
+  accuracy_rate decimal(5,2) [not null, default: 0, note: "Taxa de acerto neste domínio (porcentagem)"]
+  last_updated timestamp [default: `CURRENT_TIMESTAMP`, note: "Data da última atualização deste registro"]
+
+  indexes {
+    (user_id, domain_id) [unique, note: "Garante um registro único por usuário e domínio"]
+  }
+}
