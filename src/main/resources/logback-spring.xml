@@ -3,25 +3,43 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="aws-pract-exam-simulator"/>
+    <springProperty scope="context" name="environment" source="spring.profiles.active" defaultValue="local"/>
+
     <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <verbose>true</verbose>
+        <drainOnStop>true</drainOnStop>
+
+        <batchMaxItems>100</batchMaxItems>
+        <batchTimeoutMs>5000</batchTimeoutMs>
+
         <http>
             <url>http://localhost:3100/loki/api/v1/push</url>
+            <connectionTimeoutMs>30000</connectionTimeoutMs>
+            <requestTimeoutMs>10000</requestTimeoutMs>
         </http>
+
         <format>
             <label>
-                <pattern>app=${spring.application.name},host=${HOSTNAME},level=%level</pattern>
+                <pattern>app=${appName},environment=${environment},host=${HOSTNAME},level=%level,logger=%logger{0}</pattern>
             </label>
             <message>
                 <pattern>%date{ISO8601} [%thread] %level %logger{20} - %msg%n</pattern>
             </message>
+            <sortByTime>true</sortByTime>
         </format>
+
+        <onBackpressure>drop</onBackpressure>
+        <retryTimeoutMs>120000</retryTimeoutMs>
     </appender>
+
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="com.pedroh.awspractexamsimulator" level="DEBUG"/>
+    <logger name="org.hibernate" level="INFO"/>
+    <logger name="com.github.loki4j" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="LOKI"/>
     </root>
-
-    <logger name="org.springframework" level="INFO"/>
-    <logger name="com.pedroh.awspractexamsimulator" level="DEBUG"/>
 </configuration>
